@@ -137,7 +137,8 @@ sub reformat_data($$) {
 sub check_and_update_record($$$$$) {
     my ($zone, $data, $type, $host, $value) = @_;
     if(my $err = is_unsupported($type)) {
-        die ("Unable to process $host $type: $err");
+        warn ("WARNING: Unable to process $host $type: $err");
+        return;
     }
 
     # _info("Considering %s %s %s", $host, $type, $value);
