@@ -120,6 +120,13 @@ sub format_record($$$$) {
         my ($pri, $data) = split(/\s+/, $value);
         $record->{mx_priority} = $pri;
         $record->{data} = $data;
+    } elsif ($type eq 'SRV') {
+        # pri weight port data
+        my ($pri, $weight, $port, $data) = split(/\s+/, $value);
+        $record->{srv_priority} = $pri;
+        $record->{srv_weight} = $weight;
+        $record->{srv_port} = $port;
+        $record->{data} = $data;
     }
 
     return $record;
@@ -129,6 +136,13 @@ sub reformat_data($$) {
     my ($type, $data) = @_;
     if($type eq 'MX') {
         return sprintf('%d %s', $data->{mx_priority}, $data->{data});
+    } elsif($type eq 'SRV') {
+        return sprintf('%d %d %d %s',
+            $data->{srv_priority},
+            $data->{srv_weight},
+            $data->{srv_port},
+            $data->{data}
+        );
     }
 
     return $data->{data};
