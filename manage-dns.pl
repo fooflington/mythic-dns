@@ -23,6 +23,27 @@ sub _info {
     print STDERR "\n";
 }
 
+my %supported_types = (
+    A => "yes",
+    AAAA => "yes",
+    CAA => "not yet implemented",
+    CNAME => "yes",
+    DNAME => "not yet implemented",
+    MX => "yes",
+    NS => "yes",
+    PTR => "not yet implemented",
+    SSHFP => "not yet implemented",
+    SRV => "yes",
+    TLSA => "not yet implemented",
+    TXT => "yes",
+);
+sub is_unsupported($) {
+    my $type = shift;
+    return "Unknown type" unless defined $supported_types{$type};
+    return undef if $supported_types{$type} eq 'yes';
+    return $supported_types{$type};
+}
+
 if($ENV{DEBUG} or $in->[0]->{debug}) {
     use LWP::Debug qw(+);
     $ua->add_handler(
@@ -108,6 +129,11 @@ sub reformat_data($$) {
 
 sub check_and_update_record($$$$$) {
     my ($zone, $data, $type, $host, $value) = @_;
+    if(my $err = is_unsupported($type)) {
+        die ("Unable to process $host $type: $err");
+    }
+
+    # _info("Considering %s %s %s", $host, $type, $value);
     my $record = find_record($data, $type, $host, $value);
 
     my $url = $in->[0]->{defaults}->{api} . "/$zone/records/$host/$type";
