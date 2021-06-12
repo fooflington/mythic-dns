@@ -33,7 +33,7 @@ sub _notice {
 my %supported_types = (
     A => "yes",
     AAAA => "yes",
-    CAA => "not yet implemented",
+    CAA => "yes",
     CNAME => "yes",
     DNAME => "yes",
     MX => "yes",
@@ -127,6 +127,12 @@ sub format_record($$$$) {
         $record->{srv_weight} = $weight;
         $record->{srv_port} = $port;
         $record->{data} = $data;
+    } elsif ($type eq 'CAA') {
+        my ($flags, $property, $data) = split(/\s+/, $value);
+        $record->{caa_flags} = $flags;
+        $record->{caa_property} = $property;
+        $record->{caa_tag} = $property;
+        $record->{data} = $data;
     }
 
     return $record;
@@ -141,6 +147,12 @@ sub reformat_data($$) {
             $data->{srv_priority},
             $data->{srv_weight},
             $data->{srv_port},
+            $data->{data}
+        );
+    } elsif($type eq 'CAA') {
+        return sprintf('%d %s %s',
+            $data->{caa_flags},
+            $data->{caa_property} || $data->{caa_tag},
             $data->{data}
         );
     }
@@ -177,6 +189,7 @@ sub check_and_update_record($$$$$) {
         # Create new record
         my $new = format_record($zone, $type, $host, $value);
         _notice("Created new record: %s %s %s", $host, $type, $value);
+        _debug($new);
         my $res = $ua->post(
             $url,
             "Content-Type" => "application/json",
@@ -231,6 +244,7 @@ foreach my $z (keys %{$in->[0]->{zones}}) {
         unless (defined $seen{$record}) {
             # _info("Considering %s %s", $record->{host}, $record->{type});
             my $skip;
+            $skip = 1 if is_unsupported($record->{type});
             if ($in->[0]->{ignore}->{$z}->{$record->{host}}) {
                 # check if type is specified
                 if(keys %{$in->[0]->{ignore}->{$z}->{$record->{host}}}) {
