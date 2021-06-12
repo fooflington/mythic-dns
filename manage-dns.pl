@@ -1,6 +1,7 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 use LWP::UserAgent;
 use Data::Dumper;
 
