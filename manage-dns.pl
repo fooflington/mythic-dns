@@ -23,6 +23,12 @@ sub _info {
     print STDERR "\n";
 }
 
+sub _notice {
+    print STDERR ("NOTICE: ");
+    printf STDERR (@_);
+    print STDERR "\n";
+}
+
 my %supported_types = (
     A => "yes",
     AAAA => "yes",
@@ -92,7 +98,7 @@ sub find_record($$$$) {
         _debug("Comparing", $record, $host, $type, $value);
         if($record->{host} eq $host and $record->{type} eq $type and reformat_data($type, $record) eq $value) {
             # Mark record as seen
-            # $record->{_seen}++;
+            $seen{$record} = 1;
             _debug("Found a record matching $host $type $value");
             return $record;
         }
@@ -110,7 +116,7 @@ sub format_record($$$$) {
         type => $type,
     };
     if ($type eq 'MX') {
-        my ($pri, $data) = split(/\s+/, $value) or croak("Argh");
+        my ($pri, $data) = split(/\s+/, $value);
         $record->{mx_priority} = $pri;
         $record->{data} = $data;
     }
@@ -154,7 +160,7 @@ sub check_and_update_record($$$$$) {
     } else {
         # Create new record
         my $new = format_record($zone, $type, $host, $value);
-        _info("Created new record: %s %s %s", $host, $type, $value);
+        _notice("Created new record: %s %s %s", $host, $type, $value);
         my $res = $ua->post(
             $url,
             "Content-Type" => "application/json",
@@ -166,8 +172,16 @@ sub check_and_update_record($$$$$) {
     }
 }
 
+sub delete_record($$) {
+    my ($zone, $record) = @_;
+
+    my $url = $in->[0]->{defaults}->{api} . "/$zone/records/$record->{host}/$record->{type}?host=$record->{host}&data=$record->{data}";
+    my $res = $ua->delete($url);
+    warn "Failed to delete $url: " . $res->status_line . "\n" . $res->content unless $res->is_success;
+}
+
 foreach my $z (keys %{$in->[0]->{zones}}) {
-    print "--- Handling $z\n";
+    _info("Processing %s", $z);
     my $current = get_current_zone($z);
 
     my $zone = $in->[0]->{zones}->{$z};
@@ -194,8 +208,32 @@ foreach my $z (keys %{$in->[0]->{zones}}) {
                 }
             }
         }
-
     }
-}
 
-# check for unseen records and delete but skip "_template" : true,
+    _info("Checking for records to delete");
+    foreach my $record (@{$current->{records}}) {
+        unless (defined $seen{$record}) {
+            # _info("Considering %s %s", $record->{host}, $record->{type});
+            my $skip;
+            if ($in->[0]->{ignore}->{$z}->{$record->{host}}) {
+                # check if type is specified
+                if(keys %{$in->[0]->{ignore}->{$z}->{$record->{host}}}) {
+                    foreach my $type (keys %{$in->[0]->{ignore}->{$z}->{$record->{host}}}) {
+                        if($type eq $record->{type}) {
+                            # _info("Skipping %s %s", $record->{host}, $record->{type});
+                            $skip = 1;
+                        }
+                    }
+                } else {
+                    #_info("Skipping %s *[%s]", $record->{host}, $record->{type});
+                    $skip = 1;
+                }
+            }
+            unless ($skip) {
+                _notice("Delete %s %s %s", $record->{host}, $record->{type}, $record->{data});
+                delete_record($z, $record);
+            }
+        }
+    }
+    _info("Finished processing %s", $z);
+}
