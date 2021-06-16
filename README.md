@@ -68,12 +68,12 @@ zones:
 # Running
 Invoke the docker container with the input yaml file:
 ```bash
-docker run --rm -ti -v "${PWD}:/a" -w /a fooflington/mythic-beasts-dns mafoo.org.uk.yml
+docker run --rm -ti -v "${PWD}:/a" -w /a fooflington/mythic-dns mafoo.org.uk.yml
 ```
 
 ## Dry run
 Pass the environment variable `DRY_RUN` to prevent any changes:
 
 ```bash
-docker run --rm -ti -v "${PWD}:/a" -w /a -e DRY_RUN=1 fooflington/mythic-beasts-dns mafoo.org.uk.yml
+docker run --rm -ti -v "${PWD}:/a" -w /a -e DRY_RUN=1 fooflington/mythic-dns mafoo.org.uk.yml
 ```
