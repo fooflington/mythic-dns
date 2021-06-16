@@ -13,6 +13,7 @@ use WWW::Form::UrlEncoded::PP qw/build_urlencoded/;
 my $in = YAML::Tiny->read(shift);
 my $ua = LWP::UserAgent->new;
 my %seen;
+my $DRY_RUN = $ENV{DRY_RUN};
 
 sub _debug {
     print STDERR ("=== DEBUG ===\n", Dumper(@_), "=== END ===\n") if $ENV{DEBUG} or $in->[0]->{debug};
@@ -50,6 +51,8 @@ sub is_unsupported($) {
     return undef if $supported_types{$type} eq 'yes';
     return $supported_types{$type};
 }
+
+_notice("Dry run - no changes will be applied") if ${DRY_RUN};
 
 if($ENV{DEBUG} or $in->[0]->{debug}) {
     use LWP::Debug qw(+);
@@ -178,31 +181,36 @@ sub check_and_update_record($$$$$) {
             # Update the record
             $record->{ttl} = $in->[0]->{defaults}->{ttl}->{$zone};
             _debug("Update ", $url, $record, to_json($record));
-            my $res = $ua->put(
-                $url,
-                "Content-Type" => "application/json",
-                "Content" => to_json({ records => [ $record ] }),
-            );
-            warn "Failed to update $url: " . $res->status_line unless $res->is_success;
+            unless ($DRY_RUN) {
+                my $res = $ua->put(
+                    $url,
+                    "Content-Type" => "application/json",
+                    "Content" => to_json({ records => [ $record ] }),
+                );
+                warn "Failed to update $url: " . $res->status_line unless $res->is_success;
+            }
         }
     } else {
         # Create new record
         my $new = format_record($zone, $type, $host, $value);
         _notice("Created new record: %s %s %s", $host, $type, $value);
         _debug($new);
-        my $res = $ua->post(
-            $url,
-            "Content-Type" => "application/json",
-            Content => to_json({
-                records => [ $new ]
-            })
-        );
-        warn "Failed to create $url: " . $res->status_line . "\n" . $res->content unless $res->is_success;
+        unless ($DRY_RUN) {
+            my $res = $ua->post(
+                $url,
+                "Content-Type" => "application/json",
+                Content => to_json({
+                    records => [ $new ]
+                })
+            );
+            warn "Failed to create $url: " . $res->status_line . "\n" . $res->content unless $res->is_success;
+        }
     }
 }
 
 sub delete_record($$) {
     my ($zone, $record) = @_;
+    return if $DRY_RUN;
 
     my $url = $in->[0]->{defaults}->{api} . "/$zone/records/$record->{host}/$record->{type}?host=$record->{host}&data=$record->{data}";
     my $res = $ua->delete($url);
