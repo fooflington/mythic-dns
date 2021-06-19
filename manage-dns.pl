@@ -42,7 +42,7 @@ my %supported_types = (
     PTR => "yes",
     SSHFP => "yes",
     SRV => "yes",
-    TLSA => "not yet implemented",
+    TLSA => "yes",
     TXT => "yes",
 );
 sub is_unsupported($) {
@@ -141,6 +141,12 @@ sub format_record($$$$) {
         $record->{sshfp_type} = $keytype;
         $record->{sshfp_algorithm} = $algo;
         $record->{data} = $data;
+    } elsif ($type eq 'TLSA') {
+        my ($usage, $selector, $matching, $data) = split(/\s+/, $value);
+        $record->{tlsa_usage} = $usage;
+        $record->{tlsa_selector} = $selector;
+        $record->{tlsa_matching} = $matching;
+        $record->{data} = $data;
     }
 
     return $record;
@@ -167,6 +173,13 @@ sub reformat_data($$) {
         return sprintf('%d %d %s',
             $data->{sshfp_algorithm},
             $data->{sshfp_type},
+            $data->{data},
+        );
+    } elsif($type eq 'TLSA') {
+        return sprintf('%d %d %d %s',
+            $data->{tlsa_usage},
+            $data->{tlsa_selector},
+            $data->{tlsa_matching},
             $data->{data},
         );
     }
