@@ -40,7 +40,7 @@ my %supported_types = (
     MX => "yes",
     NS => "yes",
     PTR => "yes",
-    SSHFP => "not yet implemented",
+    SSHFP => "yes",
     SRV => "yes",
     TLSA => "not yet implemented",
     TXT => "yes",
@@ -136,6 +136,11 @@ sub format_record($$$$) {
         $record->{caa_property} = $property;
         $record->{caa_tag} = $property;
         $record->{data} = $data;
+    } elsif ($type eq 'SSHFP') {
+        my ($algo, $keytype, $data) = split(/\s+/, $value);
+        $record->{sshfp_type} = $keytype;
+        $record->{sshfp_algorithm} = $algo;
+        $record->{data} = $data;
     }
 
     return $record;
@@ -157,6 +162,12 @@ sub reformat_data($$) {
             $data->{caa_flags},
             $data->{caa_property} || $data->{caa_tag},
             $data->{data}
+        );
+    } elsif($type eq 'SSHFP') {
+        return sprintf('%d %d %s',
+            $data->{sshfp_algorithm},
+            $data->{sshfp_type},
+            $data->{data},
         );
     }
 
