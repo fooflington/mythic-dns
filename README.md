@@ -65,6 +65,20 @@ zones:
         - 10 mta2.example.com
 ```
 
+## Aliases virtual type
+There is a virtual record type `aliases` which is a list of names to CNAME to this record.
+
+For example:
+
+```yaml
+zones:
+  example.com:
+    "@":
+      A: 10.54.22.9
+      aliases:
+        - www
+        - ftp
+```
 # Running
 Invoke the docker container with the input yaml file:
 ```bash
