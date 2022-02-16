@@ -44,7 +44,7 @@ Currently only a single zone is supported.
 
 ## Supported types
 
-The client currently supports all of the Record Types implemented by the Mythic Beasts API except `SSHFP` and `TLSA`.
+The client currently supports all of the Record Types implemented by the Mythic Beasts API.
 
 ## Value syntax
 
